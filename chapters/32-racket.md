@@ -313,10 +313,28 @@ ancestor(john, X)?
 ```racket
 #lang racket
 (require web-server/servlet
-         web-server/servlet-env)
+         web-server/servlet-env
+         web-server/http)
 
-; Handler function
+; Main dispatcher
 (define (start request)
+  (define uri (request-uri request))
+  (define path (url-path uri))
+  (define method (request-method request))
+
+  (cond
+    [(and (equal? method #"GET") (equal? path (string->url "/")))
+     (home-handler request)]
+    [(and (equal? method #"POST") (equal? path (string->url "/greet")))
+     (greet-handler request)]
+    [else
+     (response/xexpr
+      '(html
+        (body
+         (h1 "404 Not Found"))))]))
+
+; Home page handler
+(define (home-handler request)
   (response/xexpr
    '(html
      (head (title "Racket Web Server"))
@@ -324,7 +342,7 @@ ancestor(john, X)?
       (h1 "Hello from Racket!")
       (p "This is a web server written in Racket.")
       (form ((action "/greet") (method "post"))
-            (input ((type "text") (name "name")))
+            (input ((type "text") (name "name") (placeholder "Your name")))
             (input ((type "submit") (value "Greet"))))))))
 
 ; Greet handler
@@ -334,7 +352,8 @@ ancestor(john, X)?
   (response/xexpr
    `(html
      (body
-      (h1 ,(format "Hello, ~a!" name))))))
+      (h1 ,(format "Hello, ~a!" name))
+      (p (a ((href "/")) "Go back"))))))
 
 ; Start server
 (serve/servlet start
